@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+      integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<html>
+<head>
+	  	<title>Telepresence Robot</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<meta http-equiv="Content-Language" content="en-us">
+		<link href="http://maxcdn.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+		<script src="peer.min.js"></script>
+		<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+		
+  <style>
+  
+  #body{
+    background-color:#101010;
+  }
+  #image{
+    position:absolute;
+    margin-top:125px;
+    margin-left:-20px;
+    width:500px;
+    height:500px;
+	opacity: 0.05;
+  }
+  table, th, td {
+  /*  border: 1px solid black; */
+    margin-left:15%;
+  }
+  th, td, tr {
+    padding-top:1px;
+    padding-left:5px;
+    text-align: left;    
+  }
+  #gornji_red{
+     height:50px;
+  }  
+  #tekst_m{
+    position:relative; 
+    margin-top:-2px;
+	color:#C8C8C8;
+  } 
+  #tekst_v{
+    position:relative; 
+    margin-top:8px;
+	color:#C8C8C8;
+  } 
+  #peerText{
+    position:relative;
+    margin-top:5px;
+	color:#C8C8C8;
+  }  
+  #peerjs_id{
+    position:relative;
+	margin-top:-5px;
+	color:white;
+  }
+  #con_status{
+     margin-left:20px;
+     margin-top:10px;
+     color:red;
+	 font-size:1.2em;
+  }
+  #disconnect{
+    background-color:#FD2B0F;
+	color:white;
+    border-radius:10px;
+	visibility: hidden;
+  }
+  #their-video{
+    position:relative;
+    margin-left:20px;
+  }
+  #my-video{
+    position:relative;
+  /*  margin-top:0px; */
+  }
+  #teh_skola {
+   /* position:relative;*/
+    margin-left:15%;
+    color:#C8C8C8;
+  }
+
+  
+  </style>
+</head>
+
+<body id="body">
+	  <script type="text/javascript">
+	  
+	  		var conn;
+			var videoCon;
+			// kreira peer objekt s vezom na PeerJS server
+			var peer = new Peer(null, {
+                        debug: 2
+                    });
+					
+			peer.on('open', function(id){
+				$('#peerjs_id').text(id);  // ispisuje PeerJS ID
+				console.log('primam ID');
+			});
+			
+			peer.on('connection', connect);  // nakon spajanja
+			
+			function connect(c){
+				conn = c
+				console.log('uspostavljena data veza');
+				$('#con_status').text("CONNECTED");  // ispisi tekst CONNECTED
+				$('#con_status').css('color', '#00ff00');  // promijeni boju na zelenu
+				$('#con_status').css("font-weight","Bold");  // stavi Bold tekst
+				$('#disconnect').css("visibility", "visible");  // prikazi button DISCONNECT
+				conn.on('data',function(data){
+					$('#inputText').val($('#inputText').val()+data);  // nakon primanja podatka dodaj primljeni tekst u inputText
+				});
+				conn.on('close', disconnect);
+			}
+			
+			function disconnect(){  // nakon klika DISCONNECT
+				if (conn.peer) {
+					conn.peer = null;  // prekini peer
+					conn.close();
+					$('#disconnect').css("visibility", "hidden");  // sakrij button DISCONNECT
+					$('#con_status').text("DISCONNECTED");  // ispisi tekst CONNECTED
+				    $('#con_status').css('color', 'red');  // promijeni boju na crvenu
+				    $('#con_status').css("font-weight","Bold");  // stavi Bold tekst
+					$('#peerjs_id').text("");  // brise PeerJS ID
+					alert('You are no longer connected to the server!'); // izbaci popup window
+					$('#inputText').val("");  // obrisi sadrzaj inputText
+				}
+				if(videoCon.peer){
+				    videoCon.peer = null;
+					videoCon.close();
+					console.log('zatvaram video poziv');
+					$('#their-video').hide();
+				}
+			}
+//---------------------------------------------------------------------------------
+
+    function handleCall(call) {
+        call.on('stream', function (remoteStream) {
+		    console.log('primam remote stream');
+            $('#their-video').show();
+            $('#their-video').prop('src', URL.createObjectURL(remoteStream));
+			console.log('prikazujem remote stream na their-video objektu');
+        });
+		videoCon = call;
+    }
+
+    // Setting for chrome
+    var constraints = window.constraints = {
+        audio: true,
+        video: true
+    };
+    navigator.mediaDevices.getUserMedia(constraints)
+            .then(function (stream) {
+                window.localStream = stream;
+                $('#my-video').prop('src', URL.createObjectURL(stream));
+				console.log('prikazujem lokal stream na my-video');
+                peer.on('call', function (call) {
+					console.log('primam poziv (peer.on)');
+                    call.answer(stream); // Answer the call with an A/V stream.
+					console.log('odgovaram/saljem lokani stream');
+                    handleCall(call);
+                });
+            });
+//--------------------------------------------------------------------------------
+			
+			$().ready(function(){
+				$('#disconnect').click(function(){
+		            console.log('disconnect');
+					disconnect();
+				});
+			}); 
+
+	  </script>
+			
+<img id="image" src="images/nikola.png">
+<table style="width:70%; height:600px">
+  <tr id="gornji_red">
+    <th style="width:270px"><h3 id="tekst_v">Telepresence robot <small id="tekst_m"><br />powered by WebRTC</small></h3></th>
+    <th style="width:230px">
+		<p id="peerText" style="font-weight:100">Your PeerJS ID is:</p>
+		<p id="peerjs_id"></p></th>
+	<th><p id="con_status"><strong>DISCONNECTED<strong></strong></p></th>
+	<th style="width:200px">
+	    <input type="button" value="DISCONNECT" id="disconnect" style="width:190px;height:40px">
+	</th>
+  </tr>
+  
+  <tr>
+    <td colspan="3" rowspan="2">
+		<video style="display: none" id="their-video" width="704" height="528" autoplay controls></video>
+	</td>
+	<td>
+	   <textarea id="inputText" rows="17" style="width:190px"></textarea>
+	</td>
+  </tr>
+  
+  <tr>
+    <td style="height:160px">
+	   <video id="my-video" class="mali_vid" width="192" height="144" muted="true" autoplay controls></video>
+	</td>
+  </tr> 
+  
+</table>
+<div id="teh_skola" style="font-size:smaller;"><strong>Made by Tehnička škola Nikole Tesle Vukovar</strong></div>
+</body>
+</html
